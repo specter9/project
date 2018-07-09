@@ -1,0 +1,150 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block main %}
+    {% if session.user_id %}
+    <h1>TEST cardcount: {{ cardcount }}</h1>
+        <div class="pl-5 pt-3">
+            <h1 class="display-4">Welcome to your dashboard!</h1>
+            <p class="lead">Browse through your folders and start rehearsing or create new cards!</p>
+        </div>
+
+            <hr/>
+
+            <div class="row">
+                <div class="col pt-4 px-5">
+
+                    <!-- Folder list -->
+                    <h4 class="lead"><b>Browse folders</b></h4>
+                    <div class="list-group py-3">
+                        {% for folder in folders %}
+                            <button class="folder-btn list-group-item list-group-item-action">
+                            {{ folder["name"] }}
+                            </button>
+                        {% endfor %}
+                    </div>
+
+                    <hr/>
+
+                    <!-- Delete Folder -->
+                    <h4 class="lead"><b>Delete folder</b></h4>
+
+                    <div class="pt-3 pb-5">
+                        <form action="/deletefolder" method="post">
+                            <div class="form-group">
+                                <select required class="form-control" name ="foldername">
+                                    <option value="" selected disabled>Select folder to delete</option>
+                                {% for folder in folders %}
+                                    <option value="{{ folder["name"] }}">{{ folder["name"] }}</option>
+                                {% endfor %}
+                                </select>
+                            </div>
+                            <button class="btn btn-dark" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Folder contents -->
+                <div class="col pt-4 px-5" id="middle-border">
+                    <h4 class="lead"><b>Folder contents</b></h4>
+                    {% if cards|length < 1 %}
+                        <p class="lead">There's nothing here...</p>
+                    {% else %}
+                        <div class="pt-3 pb-5">
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <!-- <th scope="col">#</th> -->
+                                    <th style="width: 95%">Front side</th>
+                                    <th style="width: 5%"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for card in cards %}
+                                <!--
+                                    <tr>
+                                        <th scope="row">{{ cards.index(card) + 1 }}</th>
+                                    </tr>
+                                -->
+                                <tr>
+                                    <td style="width: 95%">{{ card["front"] }}</td>
+                                    <td style="width: 5%">
+                                        <form action="/deletecard" method="post">
+                                        <input type="hidden" name="card_id" type="text" value="{{ card["id"] }}">
+                                            <button id="icon-btn" type="submit"><i class="fas fa-trash-alt"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Create new cards -->
+                <div class="col pt-4 px-5">
+
+                    <h4 class="lead"><b>Create new card</b></h4>
+
+                    <form action="/newcard" method="post" class="py-3">
+                        <div class="form-group">
+                            <select required class="form-control" name ="foldername">
+                                <option value="" selected disabled>Select folder</option>
+                            {% for folder in folders %}
+                                <option value="{{ folder["name"] }}">{{ folder["name"] }}</option>
+                            {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <input required autocomplete="off" autofocus class="form-control" name="front" placeholder="Front content" maxlength="55" type="text"/>
+                        </div>
+                        <div class="form-group">
+                            <input required autocomplete="off" autofocus class="form-control" name="back" placeholder="Back content" maxlength="55" type="text"/>
+                        </div>
+                        <button class="btn btn-dark" type="submit">Create card</button>
+                    </form>
+
+                    <hr/>
+
+                    <!-- Create new folder -->
+                    <h4 class="lead"><b>Create new folder</b></h4>
+
+                    <div class="pt-3 pb-5">
+                        <form action="/newfolder" method="post">
+                            <div class="form-group">
+                                <input required autocomplete="off" autofocus class="form-control" name="foldername" placeholder="New Folder Name" maxlength="30" type="text"/>
+                            </div>
+                            <button class="btn btn-dark" type="submit">Create folder</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+    {% else %}
+        <div class="jumbotron jumbotron-fluid">
+          <div class="container">
+            <h1 class="display-4">Welcome to Flash Card Maker!</h1>
+            <p class="lead">Please <a href="/register">login</a> to access your dashboard. <br/>
+            <b>Newcomers? </b><a href="/register">Register</a> in a few secs and start building your flash card!
+            </p>
+          </div>
+        </div>
+    {% endif %}
+
+<script>
+    $(document).ready(function() {
+       $(".folder-btn").click(function() {
+          $(".folder-btn").not(this).removeClass("active");
+          $(this).toggleClass("active");
+       });
+    });
+
+
+</script>
+
+{% endblock %}

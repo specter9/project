@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Register
+{% endblock %}
+
+{% block main %}
+    <div id="center-form" class="pt-5">
+        <form action="/register" method="post">
+            <div class="form-group">
+                <input required autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text"/>
+            </div>
+            <div class="form-group">
+                <input required class="form-control" id="password" name="password" placeholder="Password" type="password"/>
+            </div>
+            <div class="form-group">
+                <input required class="form-control" id="confirmation" name="confirmation" placeholder="Re-type password" type="password"/>
+            </div>
+            <button class="btn btn-dark" type="submit">Register</button>
+        </form>
+    </div>
+
+    <script>
+        let password = document.getElementById("password");
+        let confirm_password = document.getElementById("confirmation");
+
+        function validatePass(){
+            if(password.value != confirm_password.value) {
+                confirm_password.setCustomValidity("Passwords Don't Match");
+            } else {
+                confirm_password.setCustomValidity('');
+            }
+        }
+
+        password.onchange = validatePass;
+        confirm_password.onkeyup = validatePass;
+    </script>
+{% endblock %}
