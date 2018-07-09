@@ -1,0 +1,30 @@
+.navbar-light .navbar-nav .nav-link {
+    padding-top: 0px;
+}
+
+#center-form {
+  width: 30%;
+  margin: 0 auto;
+  float: none;
+}
+
+#middle-border {
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+}
+
+#icon-btn {
+    border-style: none;
+    background-color: rgba(255, 255, 255, 0);;
+    float: right;
+    color:#ccc;
+}
+
+#icon-btn:hover {
+    cursor: pointer;
+    color:red;
+}
+
+.jumbotron {
+    margin-bottom: 0;
+}
