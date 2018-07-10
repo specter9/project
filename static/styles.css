@@ -17,12 +17,12 @@
     border-style: none;
     background-color: rgba(255, 255, 255, 0);;
     float: right;
-    color:#ccc;
+    color: #C1C1C0;
 }
 
 #icon-btn:hover {
     cursor: pointer;
-    color:red;
+    color: #3E3E3D;
 }
 
 .jumbotron {

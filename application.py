@@ -38,30 +38,28 @@ db = SQL("sqlite:///flashcard.db")
 def index():
 
     # Redirect to dashboard if user has login
-    if not session:
+    if session.get("user_id") is None:
         return render_template("index.html")
     else:
         return redirect(url_for('dashboard'))
 
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
     userid = session["user_id"]
 
     folders = update_folder(userid)
-    cards = update_card(userid)
+    active_folder = folders[0]["id"]
+
+    cards = update_card(active_folder)
 
     session["folders"] = folders
     session["cards"] = cards
 
-###    ######## WORK ON THIS ##########
-    # Loop folder to get the card inside
-#    for folder in folders:
+    # Set default folder to show on view
+    active_folder = folders[0]["id"]
 
-
- #   cardrow = countcard( # FOLDER ID #)
-
- #   cardcount = cardrow[0]["COUNT (id)"]
 
     return render_template("index.html", folders=folders, cards=cards)
 
@@ -105,6 +103,7 @@ def login():
     else:
         return render_template("login.html")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user"""
@@ -129,8 +128,12 @@ def register():
             userid = session["user_id"]
 
             # Make default folder
-            db.execute("INSERT INTO folders (name, user_id) VALUES (:name, :userid)",
-                       name="My folder", userid=userid)
+            folderid = db.execute("INSERT INTO folders (name, user_id) VALUES (:name, :userid)",
+                                  name="My folder", userid=userid)
+
+            # Make first card
+            db.execute("INSERT INTO cards (folder_id, user_id, front, back) VALUES (:folderid, :userid, :front, :back)",
+                       folderid=folderid, userid=userid, front="Front text here", back="Back text goes here")
 
             # Update session
             folders = update_folder(userid)
@@ -163,6 +166,7 @@ def logout():
 
 
 @app.route("/newfolder", methods=["POST"])
+@login_required
 def newfolder():
     """Create new folders"""
 
@@ -215,6 +219,7 @@ def newfolder():
 
 
 @app.route("/newcard", methods=["POST"])
+@login_required
 def newcard():
     """Create new cards"""
 
@@ -242,18 +247,42 @@ def newcard():
     return redirect(url_for('dashboard'))
 
 
-@app.route("/deletefolder", methods=["POST"])
-def deletefolder():
-    """Delete selected folder"""
-
-    userid=session["user_id"]
+@app.route("/editfolder", methods=["POST"])
+@login_required
+def editfolder():
+    """Edit selected folder"""
 
     # Get folder id
-    foldername = request.form.get("foldername")
+    folderid = request.form.get("folderid")
+    userid = session["user_id"]
 
-    # Delete folder
-    db.execute("DELETE FROM folders WHERE user_id = :userid AND name = :foldername",
-               userid=userid, foldername=foldername)
+    if request.form.get("action") == "rename":
+        # Rename folder
+        newname = request.form.get("newname")
+
+        db.execute("UPDATE folders SET name = :newname WHERE id = :folderid",
+                    newname=newname, folderid=folderid)
+
+    if request.form.get("action") == "delete":
+        # DELETE FOLDER
+        userid=session["user_id"]
+
+        # Don't execute if it's the last folder
+        folders = update_folder(userid)
+        if len(folders) <= 1:
+            flash("You cannot delete your last folder")
+
+            # Redirect user to home page
+            return redirect(url_for('dashboard'))
+
+        else:
+            # Delete folder
+            db.execute("DELETE FROM folders WHERE user_id = :userid AND id = :folderid",
+                       userid=userid, folderid=folderid)
+
+            # Delete all cards within folder
+            db.execute("DELETE FROM cards WHERE folder_id = :folderid",
+                       folderid=folderid)
 
     # Update session
     folders = update_folder(userid)
@@ -265,18 +294,29 @@ def deletefolder():
     # Redirect user to home page
     return redirect(url_for('dashboard'))
 
-@app.route("/deletecard", methods=["POST"])
-def deletecard():
-    """Delete selected card"""
+
+@app.route("/editcard", methods=["POST"])
+@login_required
+def editcard():
+    """Edit selected card"""
 
     userid=session["user_id"]
 
     # Get card id
     card_id=request.form.get("card_id")
 
-    # Delete card
-    db.execute("DELETE FROM cards WHERE user_id = :userid AND id = :card_id",
-               userid=userid, card_id=card_id)
+    if request.form.get("action") == "edit":
+        front = request.form.get("newfront")
+        back = request.form.get("newback")
+
+        # Edit card content
+        db.execute("UPDATE cards SET front = :front, back = :back WHERE id = :card_id",
+                    front=front, back=back, card_id=card_id)
+
+    if request.form.get("action") == "delete":
+        # Delete card
+        db.execute("DELETE FROM cards WHERE user_id = :userid AND id = :card_id",
+                   userid=userid, card_id=card_id)
 
     # Update session
     folders = update_folder(userid)

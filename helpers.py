@@ -27,12 +27,29 @@ def countcard(folderid):
 
 
 def update_folder(userid):
-    result = db.execute("SELECT * FROM folders WHERE user_id = :userid",
-                        userid=session["user_id"])
+#    result = db.execute("SELECT * FROM folders WHERE user_id = :userid",
+#                        userid=session["user_id"])
+
+    result = db.execute("""SELECT folders.id id, folders.name name, COUNT(cards.id) card_amount
+                        FROM folders INNER JOIN users ON folders.user_id=users.id
+                        LEFT JOIN cards ON folders.id=cards.folder_id
+                        WHERE folders.user_id = :userid
+                        GROUP BY folders.id""",
+                        userid=userid)
     return result
 
 
-def update_card(userid):
-    result = db.execute("SELECT * FROM cards WHERE user_id = :userid",
-                        userid=session["user_id"])
+def update_card(folderid):
+#    result = db.execute("SELECT * FROM cards WHERE user_id = :userid",
+#                        userid=session["user_id"])
+
+    result = db.execute("SELECT * FROM cards WHERE folder_id = :folderid",
+                         folderid=folderid)
+    return result
+
+
+def show_card(folderid):
+    result = db.execute("SELECT id, front, back FROM cards WHERE folder_id = :folderid",
+                        folderid=folderid)
+
     return result
