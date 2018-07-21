@@ -343,40 +343,6 @@ def getdeck():
     return jsonify(deck)
 
 
-@app.route("/testindex")
-@login_required
-def testindex():
-
-    userid = session["user_id"]
-    active_folder = session["active_folder"]
-
-    # Clear user's rehearse temp data
-    session.pop('rehearse_deck', None)
-
-    db.execute("DELETE FROM rehearse WHERE user_id = :userid",
-               userid=userid)
-
-    folders = update_folder(userid)
-    cards = update_card(active_folder)
-
-    session["folders"] = folders
-    session["cards"] = cards
-
-    return render_template("test.html", folders=folders, cards=cards)
-
-
-@app.route("/foldercontent")
-def foldercontent():
-
-    folderid = session["active_folder"]
-
-    content = db.execute("SELECT front, back FROM cards WHERE folder_id = :folderid",
-                         folderid=folderid)
-
-    return jsonify(content)
-
-
-# new route ##############
 @app.route("/loadcard")
 def loadcard():
 
