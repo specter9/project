@@ -1,7 +1,7 @@
 import os
 
 from cs50 import SQL
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for, jsonify
 from flask_session import Session
 from tempfile import mkdtemp
 
@@ -17,12 +17,15 @@ app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 # Ensure responses aren't cached
+
+
 @app.after_request
 def after_request(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Expires"] = 0
     response.headers["Pragma"] = "no-cache"
     return response
+
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_FILE_DIR"] = mkdtemp()
@@ -47,26 +50,27 @@ def index():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+
     userid = session["user_id"]
+    active_folder = session["active_folder"]
+
+    # Clear user's rehearse temp data
+    session.pop('rehearse_deck', None)
+
+    db.execute("DELETE FROM rehearse WHERE user_id = :userid",
+               userid=userid)
 
     folders = update_folder(userid)
-    active_folder = folders[0]["id"]
-
     cards = update_card(active_folder)
 
     session["folders"] = folders
     session["cards"] = cards
-
-    # Set default folder to show on view
-    active_folder = folders[0]["id"]
-
 
     return render_template("index.html", folders=folders, cards=cards)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     """Log user in"""
 
     # Forget any user_id
@@ -91,10 +95,7 @@ def login():
 
         # Update session
         folders = update_folder(userid)
-        cards = update_card(userid)
-
-        session["folders"] = folders
-        session["cards"] = cards
+        session["active_folder"] = folders[0]["id"]
 
         # Redirect user to home page
         return redirect(url_for('dashboard'))
@@ -135,24 +136,18 @@ def register():
             db.execute("INSERT INTO cards (folder_id, user_id, front, back) VALUES (:folderid, :userid, :front, :back)",
                        folderid=folderid, userid=userid, front="Front text here", back="Back text goes here")
 
-            # Update session
-            folders = update_folder(userid)
-            cards = update_card(userid)
-
-            session["folders"] = folders
-            session["cards"] = cards
-
             # Redirect user to dashboard
             flash("You're registered :) Start building your flashcards!")
 
             return redirect(url_for('dashboard'))
 
-
     # User reached route via GET (as by clicking a link or via redirect)
     else:
+        flash("You've been logged out")
         # Forget any user_id
         session.clear()
         return render_template("register.html")
+
 
 @app.route("/logout")
 def logout():
@@ -175,17 +170,9 @@ def newfolder():
 
     # Avoid same folder name
     rows = db.execute("SELECT * FROM folders WHERE user_id = :userid AND name = :foldername",
-                     userid=userid, foldername=foldername)
+                      userid=userid, foldername=foldername)
 
     if len(rows) >= 1:
-
-        folders = update_folder(userid)
-        cards = update_card(userid)
-
-        session["folders"] = folders
-        session["cards"] = cards
-
-
         flash("Folder name already exists")
         return redirect(url_for('dashboard'))
 
@@ -195,10 +182,6 @@ def newfolder():
 
         # Failed to create new folder if user already have 5 folders
         if len(folders) >= 5:
-            cards = update_card(userid)
-
-            session["folders"] = folders
-            session["cards"] = cards
 
             # Redirect user to home page
             flash("Maximum folders you can have is 5 folders")
@@ -207,12 +190,6 @@ def newfolder():
         else:
             db.execute("INSERT INTO folders (name, user_id) VALUES (:name, :userid)",
                        name=foldername, userid=userid)
-
-            folders = update_folder(userid)
-            cards = update_card(userid)
-
-            session["folders"] = folders
-            session["cards"] = cards
 
             # Redirect user to home page
             return redirect(url_for('dashboard'))
@@ -223,28 +200,34 @@ def newfolder():
 def newcard():
     """Create new cards"""
 
-    userid=session["user_id"]
+    userid = session["user_id"]
 
     # Get folder id
     foldername = request.form.get("foldername")
 
     row = db.execute("SELECT id FROM folders WHERE user_id = :userid AND name = :foldername",
-                          userid=userid, foldername=foldername)
+                     userid=userid, foldername=foldername)
     folderid = row[0]["id"]
 
-    # Insert new card to database
-    db.execute("INSERT INTO cards (folder_id, user_id, front, back) VALUES (:folderid , :userid, :front, :back)",
-               folderid=folderid, userid=userid, front=request.form.get("front"), back=request.form.get("back"))
+    # Check if folder have more than 10 cards
+    card_data = db.execute("""SELECT folders.id id, COUNT(cards.id) card_amount
+                           FROM folders LEFT JOIN cards ON folders.id=cards.folder_id
+                           WHERE folders.id = :folderid""",
+                           folderid=folderid)
 
-    # Update session
-    folders = update_folder(userid)
-    cards = update_card(userid)
+    # Reject if folder have more than 10 cards
+    if card_data[0]["card_amount"] >= 10:
+        flash("Maximum cards on a folder is 10 cards")
+        # Redirect user to home page
+        return redirect(url_for('dashboard'))
 
-    session["folders"] = folders
-    session["cards"] = cards
+    else:
+        # Insert new card to database
+        db.execute("INSERT INTO cards (folder_id, user_id, front, back) VALUES (:folderid , :userid, :front, :back)",
+                   folderid=folderid, userid=userid, front=request.form.get("front"), back=request.form.get("back"))
 
-    # Redirect user to home page
-    return redirect(url_for('dashboard'))
+        # Redirect user to home page
+        return redirect(url_for('dashboard'))
 
 
 @app.route("/editfolder", methods=["POST"])
@@ -261,11 +244,11 @@ def editfolder():
         newname = request.form.get("newname")
 
         db.execute("UPDATE folders SET name = :newname WHERE id = :folderid",
-                    newname=newname, folderid=folderid)
+                   newname=newname, folderid=folderid)
 
     if request.form.get("action") == "delete":
         # DELETE FOLDER
-        userid=session["user_id"]
+        userid = session["user_id"]
 
         # Don't execute if it's the last folder
         folders = update_folder(userid)
@@ -284,13 +267,6 @@ def editfolder():
             db.execute("DELETE FROM cards WHERE folder_id = :folderid",
                        folderid=folderid)
 
-    # Update session
-    folders = update_folder(userid)
-    cards = update_card(userid)
-
-    session["folders"] = folders
-    session["cards"] = cards
-
     # Redirect user to home page
     return redirect(url_for('dashboard'))
 
@@ -300,10 +276,10 @@ def editfolder():
 def editcard():
     """Edit selected card"""
 
-    userid=session["user_id"]
+    userid = session["user_id"]
 
     # Get card id
-    card_id=request.form.get("card_id")
+    card_id = request.form.get("card_id")
 
     if request.form.get("action") == "edit":
         front = request.form.get("newfront")
@@ -311,19 +287,86 @@ def editcard():
 
         # Edit card content
         db.execute("UPDATE cards SET front = :front, back = :back WHERE id = :card_id",
-                    front=front, back=back, card_id=card_id)
+                   front=front, back=back, card_id=card_id)
 
     if request.form.get("action") == "delete":
         # Delete card
         db.execute("DELETE FROM cards WHERE user_id = :userid AND id = :card_id",
                    userid=userid, card_id=card_id)
 
-    # Update session
+    # Redirect user to home page
+    return redirect(url_for('dashboard'))
+
+
+@app.route("/viewfolder", methods=["POST"])
+@login_required
+def viewfolder():
+    """View selected folder"""
+
+    session["active_folder"] = request.form.get("folderid")
+
+    # Redirect user to home page
+    return redirect(url_for('dashboard'))
+
+
+@app.route("/rehearse", methods=["POST"])
+def rehearse():
+
+    folderid = session["active_folder"]
+
+    # Rehearse by Front
+    if request.form.get("action") == "front":
+
+        # Load deck and save to session
+        deck = db.execute("SELECT front, back FROM cards WHERE folder_id = :folderid",
+                          folderid=folderid)
+        session["rehearse_deck"] = deck
+
+    # Rehearse by Back
+    if request.form.get("action") == "back":
+
+        # Load deck and save to session
+        deck = db.execute("SELECT front back, back front FROM cards WHERE folder_id = :folderid",
+                          folderid=folderid)
+        session["rehearse_deck"] = deck
+
+    return render_template("rehearse_ajax.html")
+
+
+@app.route("/getdeck")
+def getdeck():
+    deck = session["rehearse_deck"]
+    return jsonify(deck)
+
+
+@app.route("/testindex")
+@login_required
+def testindex():
+
+    userid = session["user_id"]
+    active_folder = session["active_folder"]
+
+    # Clear user's rehearse temp data
+    session.pop('rehearse_deck', None)
+
+    db.execute("DELETE FROM rehearse WHERE user_id = :userid",
+               userid=userid)
+
     folders = update_folder(userid)
-    cards = update_card(userid)
+    cards = update_card(active_folder)
 
     session["folders"] = folders
     session["cards"] = cards
 
-    # Redirect user to home page
-    return redirect(url_for('dashboard'))
+    return render_template("test.html", folders=folders, cards=cards)
+
+
+@app.route("/foldercontent")
+def foldercontent():
+
+    folderid = session["active_folder"]
+
+    content = db.execute("SELECT front, back FROM cards WHERE folder_id = :folderid",
+                         folderid=folderid)
+
+    return jsonify(content)

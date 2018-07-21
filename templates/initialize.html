@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Initialize
+{% endblock %}
+
+{% block main %}
+<div id="center-form" class="pt-5">
+    <h5 class="lead text-center">Start rehearsing cards by {{ side }} side from {{ foldername }} folder?</h5><br/>
+
+    <div style="text-align:center">
+    <form action="/rehearse" method="get">
+        <button class="btn btn-dark" type="submit">Start Rehearsing</button>
+        &nbsp;
+        <a href="/dashboard" class="btn btn-danger">Cancel</a>
+    </div>
+</div>
+{% endblock %}

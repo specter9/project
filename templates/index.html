@@ -6,6 +6,10 @@
 
 {% block main %}
     {% if session.user_id %}
+
+    <!-- Session active folder-->
+    <input type="hidden" id="active_folder" value="{{ session["active_folder"] }}">
+
         <div class="pl-5 pt-3">
             <h1 class="display-4">Welcome to your dashboard!</h1>
             <p class="lead">Browse through your folders and start rehearsing or create new cards!</p>
@@ -20,10 +24,13 @@
                     <h4 class="lead"><b>Browse folders</b></h4>
                     <div class="list-group py-3">
                         {% for folder in folders %}
-                            <button id="folder-{{ loop.index }}" class="folder-btn list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <form action="/viewfolder" method="post">
+                            <input type="hidden" name="folderid" type="text" value="{{ folder["id"] }}">
+                            <button type="submit" id="{{ folder["id"] }}" class="folder-btn list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             {{ folder["name"] }}
                             <span class="badge badge-primary badge-pill">{{ folder["card_amount"] }}</span>
                             </button>
+                        </form>
                         {% endfor %}
                     </div>
 
@@ -98,10 +105,23 @@
 
                 <!-- Folder contents -->
                 <div class="col pt-4 px-5" id="middle-border">
-                    <h4 class="lead"><b>Folder contents</b></h4>
                     {% if cards|length < 1 %}
-                        <p class="lead">There's nothing here...</p>
+                        <h4 class="lead"><b>Folder content</b></h4>
+                        <p class="pt-4 lead">There's nothing here...</p>
                     {% else %}
+                    <div>
+                        <h4 class="lead"><b>Folder content</b></h4>
+                        <form class="pt-3" action="/rehearse" method="post">
+                            <label>Rehearse by :</label>
+                            &nbsp;
+                            <button type="submit" name="action" value="front" class="btn btn-dark btn-sm">Front side</button>
+                            &nbsp;
+                            <button type="submit" name="action" value="back" class="btn btn-dark btn-sm">Back side</button>
+                        </form>
+                    </div>
+
+                    <br/>
+
 <!-- CARD VERSION 1.0 (TABLE FORMAT)
                         <div class="pt-3 pb-5">
                         <table class="table table-condensed">
@@ -129,7 +149,7 @@
 END OF CARD VERSION 1.0 (TABLE FORMAT)-->
 
 <!-- CARD VERSION 2.0 (CARD FORMAT) -->
-                    <div class="pt-3 pb-5">
+                    <div class="pb-5">
                         {% for card in cards %}
                         <div class="card text-dark bg-light mb-3">
                             <div class="card-header">
@@ -237,6 +257,8 @@ END OF CARD VERSION 1.0 (TABLE FORMAT)-->
     {% endif %}
 
 <script>
+
+    // Toggle activate button when clicked
     $(document).ready(function() {
        $(".folder-btn").click(function() {
           $(".folder-btn").not(this).removeClass("active");
@@ -244,16 +266,20 @@ END OF CARD VERSION 1.0 (TABLE FORMAT)-->
        });
     });
 
+    // Activate active folder
     $(document).ready(function() {
-       $("#folder-1").addClass("active");
+        let active_folder = document.getElementById('active_folder').value;
+       $("#" + active_folder).addClass("active");
     });
 
+    // Add required to input when rename button is clicked
     $(document).ready(function() {
        $("folder_rename_btn").click(function() {
           $("#folder_rename_input").addClass("required");
        });
     });
 
+    // Remove required to input when cancel button is clicked
     $(document).ready(function() {
        $("folder_rename_cancel").click(function() {
           $("#folder_rename_input").removeClass("required");

@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Rehearse
+{% endblock %}
+
+{% block main %}
+<div id="center-form" class="pt-5">
+    <h5 class="lead text-center">{{ card_amount }} card(s) left</h5><br/>
+    <form action="/rehearse" method="post">
+        <div class="card bg-light mb-3">
+            <div class="card-body">
+                <input type="hidden" name="card_id" value="{{ deck[0]["card_id"] }}">
+                <h4 class="card-text text-center">{{ front }}</h4>
+                <input type="hidden" name="front" value="{{ front }}">
+                <hr/>
+                <div id="change" class="text-center">
+                    <a class="btn btn-dark" href="#" id="showback" class="card-text text-center">Show content</a>
+                </div>
+                <input type="hidden" id="back" name="back" value="{{ back }}">
+            </div>
+        </div>
+        <br/>
+
+        <div style="text-align:center">
+        <button class="btn btn-danger" name="action" value="again" type="submit">Try again</button>
+        &nbsp;
+        <button class="btn btn-info" name="action" value="good" type="submit">I got this!</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function() {
+        let back = document.getElementById('back').value;
+
+        $("#showback").click(function() {
+            $("#change").text(back)
+        });
+    });
+</script>
+
+{% endblock %}
