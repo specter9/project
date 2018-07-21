@@ -32,7 +32,7 @@
 // Show hidden content
 $(document).ready(function() {
     $("#change").on('click','#showback', function() {
-        let back = $("#back").val();
+        let back = '<i id="back">' + card[0]["back"] + "</i>";
         $("#change").html(back);
         console.log("clicked");
     });
@@ -43,14 +43,14 @@ let card;
 
 function updateValue() {
     $("#front").text(card[0]["front"]);
-    $("#back").val(card[0]["back"]);
+    $("#back").text(card[0]["back"]);
 }
 
 function reloadButton() {
     let content = '<a class="btn btn-dark" href="#" id="showback" class="card-text text-center">Show content</a>\
                   <input type="hidden" id="back" value="">';
     $("#change").html(content);
-    $("#back").val(card[0]["back"]);
+    $("#back").text(card[0]["back"]);
 
 }
 
@@ -82,7 +82,7 @@ $(document).ready(function() {
 
         // add array
         let front = $("#front").text();
-        let back = $("#back").val();
+        let back = $("#back").text();
 
         let newcard = {back: back, front: front};
         card.push(newcard);

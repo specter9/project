@@ -132,9 +132,13 @@ def register():
             folderid = db.execute("INSERT INTO folders (name, user_id) VALUES (:name, :userid)",
                                   name="My folder", userid=userid)
 
+
             # Make first card
             db.execute("INSERT INTO cards (folder_id, user_id, front, back) VALUES (:folderid, :userid, :front, :back)",
                        folderid=folderid, userid=userid, front="Front text here", back="Back text goes here")
+
+            folders = update_folder(userid)
+            session["active_folder"] = folders[0]["id"]
 
             # Redirect user to dashboard
             flash("You're registered :) Start building your flashcards!")
@@ -312,7 +316,7 @@ def viewfolder():
 @app.route("/rehearse", methods=["POST"])
 def rehearse():
 
-    folderid = session["active_folder"]
+    folderid = request.form.get("folder_id")
 
     # Rehearse by Front
     if request.form.get("action") == "front":
@@ -370,3 +374,15 @@ def foldercontent():
                          folderid=folderid)
 
     return jsonify(content)
+
+
+# new route ##############
+@app.route("/loadcard")
+def loadcard():
+
+    folderid = request.args.get('folder')
+
+    content = db.execute("SELECT * FROM cards WHERE folder_id = :folderid",
+                         folderid=folderid)
+    return jsonify(content)
+
