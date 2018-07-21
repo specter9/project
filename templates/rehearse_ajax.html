@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Rehearse
+{% endblock %}
+
+{% block main %}
+<div id="center-form" class="pt-5 content">
+    <h5 class="lead text-center" id="cardcount"></h5><br/>
+        <div class="card bg-light mb-3">
+            <div class="card-body">
+                <h4 id="front" class="card-text text-center"></h4>
+                <hr/>
+                <div id="change" class="text-center">
+                    <a class="btn btn-dark" href="#" id="showback" class="card-text text-center">Show content</a>
+                    <input type="hidden" id="back" value="">
+                </div>
+
+            </div>
+        </div>
+        <br/>
+
+        <div style="text-align:center">
+        <button class="btn btn-danger" id="again">Try again</button>
+        &nbsp;
+        <button class="btn btn-info" id="good">I got this!</button>
+        </div>
+</div>
+
+<script>
+
+// Show hidden content
+$(document).ready(function() {
+    $("#change").on('click','#showback', function() {
+        let back = $("#back").val();
+        $("#change").html(back);
+        console.log("clicked");
+    });
+});
+
+// Show cards within deck
+let card;
+
+function updateValue() {
+    $("#front").text(card[0]["front"]);
+    $("#back").val(card[0]["back"]);
+}
+
+function reloadButton() {
+    let content = '<a class="btn btn-dark" href="#" id="showback" class="card-text text-center">Show content</a>\
+                  <input type="hidden" id="back" value="">';
+    $("#change").html(content);
+    $("#back").val(card[0]["back"]);
+
+}
+
+function checkDeck() {
+    if(card.length == 0) {
+        let finish = '<h5 class="lead text-center">' + "Yay! You're done!" + '</h5><br/>\
+                      <div class="text-center">\
+                      <a href="/dashboard" class="btn btn-dark">Return to dashboard</a></div>';
+        $(".content").html(finish);
+    }
+}
+
+function countCard() {
+    let amount = card.length;
+    let cardCount = amount + " card(s) left";
+    $("#cardcount").text(cardCount);
+}
+
+$(document).ready(function() {
+    $.getJSON("/getdeck").done( function(data, textStatus, jqXHR) {
+        card = data;
+        countCard();
+        updateValue();
+    });
+});
+
+$(document).ready(function() {
+    $("#again").click(function() {
+
+        // add array
+        let front = $("#front").text();
+        let back = $("#back").val();
+
+        let newcard = {back: back, front: front};
+        card.push(newcard);
+
+        // delete array[0]
+        card.shift();
+
+        checkDeck();
+        updateValue();
+        countCard();
+        reloadButton();
+
+
+        console.log(card);
+    });
+});
+
+$(document).ready(function() {
+    $("#good").click(function() {
+
+        // delete array[0]
+        card.shift();
+        console.log(card);
+
+        checkDeck();
+        updateValue();
+        countCard();
+        reloadButton();
+
+    });
+});
+
+</script>
+{% endblock %}
